@@ -29,12 +29,12 @@ function calculateWinningLine(squares) {
   return [];
 }
 
-function Board({ xIsNext, squares, onPlay }) {
-  function handleClick(i) {
+function Board({ xIsNext, squares, onPlay, move }) {
+  function handleClick(i, row, col) {
     if (squares[i] || calculateWinningLine(squares).length > 0) {
       return;
     }
-    onPlay(i);
+    onPlay(i, row, col);
   }
 
   const winningLine = calculateWinningLine(squares);
@@ -42,7 +42,11 @@ function Board({ xIsNext, squares, onPlay }) {
   if (winningLine.length > 0) {
     status = 'Winner: ' + squares[winningLine[0]];
   } else {
-    status = 'Next Player: ' + (xIsNext ? 'X' : 'O');
+    if (move === 9) {
+      status = 'Game is Draw!';
+    } else {
+      status = 'Next Player: ' + (xIsNext ? 'X' : 'O');
+    }
   }
 
   const boardItems = [
@@ -53,10 +57,10 @@ function Board({ xIsNext, squares, onPlay }) {
   return (
     <>
       <div className="status">{status}</div>
-      {boardItems.map((row, i) => (
-        <div key={i} className="board-row">
-          {row.map((col) => {
-            return <Square key={col} highlight={winningLine.includes(col)} value={squares[col]} onSquareClick={() => handleClick(col)} />;
+      {boardItems.map((rowItems, row) => (
+        <div key={row} className="board-row">
+          {rowItems.map((i, col) => {
+            return <Square key={i} highlight={winningLine.includes(i)} value={squares[i]} onSquareClick={() => handleClick(i, row, col)} />;
           })}
         </div>
       ))}
@@ -66,20 +70,20 @@ function Board({ xIsNext, squares, onPlay }) {
 
 export default function Game() {
   const [history, setHistory] = useState([Array(9).fill(null)]);
-  const [indexHistory, setIndexHistory] = useState([]);
+  const [pointsHistory, setPointsHistory] = useState([[]]);
   const [currentMove, setCurrentMove] = useState(0);
   const [isAsc, setIsAsc] = useState(true);
   const xIsNext = currentMove % 2 === 0;
   const currentSquares = history[currentMove];
 
-  function handlePlay(i) {
+  function handlePlay(i, row, column) {
     const nextSquares = currentSquares.slice();
     nextSquares[i] = xIsNext ? 'X' : 'O';
 
     const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
-    const nextIndexHistory = [...indexHistory.slice(0, currentMove + 1), i];
+    const nextPointHistory = [...pointsHistory.slice(0, currentMove + 1), [row, column]];
     setHistory(nextHistory);
-    setIndexHistory(nextIndexHistory);
+    setPointsHistory(nextPointHistory);
     setCurrentMove(nextHistory.length - 1);
   }
 
@@ -92,11 +96,8 @@ export default function Game() {
   }
 
   function getPoint(move) {
-    const index = indexHistory[move];
-    if (index) {
-      return `(${Math.floor(index / 3)}, ${index % 3})`;
-    }
-    return '';
+    const point = pointsHistory[move];
+    return `(${point.join(', ')})`;
   }
 
   const moves = history.map((_, move) => {
@@ -131,7 +132,7 @@ export default function Game() {
   return (
     <div className="game">
       <div className="game-board">
-        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />
+        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} move={currentMove} />
       </div>
       <div className="game-info">
         Sort: <button onClick={sortMoves}>{isAsc ? 'Desc' : 'Asc'}</button>
